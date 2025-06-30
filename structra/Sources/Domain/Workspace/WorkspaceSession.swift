@@ -6,9 +6,9 @@
 //  Updated on 2025/06/26 to add `openFile(at:)` and `selectedNodeID` support.
 //
 
+import AppKit
 import Combine
 import Foundation
-import AppKit
 import SwiftUI
 
 /// Holds one open project: its tree model, file watcher, and any other
@@ -43,7 +43,8 @@ public final class WorkspaceSession: ObservableObject {
         self.watcher = FileSystemWatcher(
             paths: [projectURL.path],
             excludePatterns: excludePatterns
-        ) { events in
+        ) { [weak model] events in
+            guard let model else { return }
             Task { @MainActor in
                 model.handleFileEvents(events)
             }
@@ -54,24 +55,35 @@ public final class WorkspaceSession: ObservableObject {
         restoreSelectionState()
 
         // Autosave selection state on change
-        autosaveCancellable = $selectedNodeID
+        autosaveCancellable =
+            $selectedNodeID
             .sink { [weak self] _ in self?.saveSelectionState() }
     }
 
     // MARK: – Window Management
 
     public func showWindow() {
+        let initialSize = CGSize(width: 1000, height: 600)
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1000, height: 600),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
-            backing: .buffered, defer: false
+            contentRect: NSRect(origin: .zero, size: initialSize),
+            styleMask: [
+                .titled, .closable, .miniaturizable, .resizable,
+                .fullSizeContentView,
+            ],
+            backing: .buffered,
+            defer: false
         )
-        window.minSize = CGSize(width: 1000, height: 600)
         window.title = projectName
+
+        // Set a smaller minSize to allow resizing
+        window.minSize = CGSize(width: 600, height: 400)
 
         let controller = EditorWindowController(window: window)
         self.windowController = controller
         controller.showWindow(self)
+
+        // Set the content size *after* showing the window
+        window.setContentSize(initialSize)
         window.center()
     }
 
@@ -92,7 +104,8 @@ public final class WorkspaceSession: ObservableObject {
     private func restoreSelectionState() {
         let key = projectURL.path.sha256()
         if let data = UserDefaults.standard.data(forKey: key),
-           let id = try? PropertyListDecoder().decode(UUID?.self, from: data) {
+            let id = try? PropertyListDecoder().decode(UUID?.self, from: data)
+        {
             selectedNodeID = id
         }
     }

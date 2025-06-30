@@ -49,7 +49,9 @@ extension ProjectNavigatorViewController: NSOutlineViewDelegate {
         )
 
         return FileSystemTableViewCell(
-            frame: frameRect
+            frame: frameRect,
+            node: node,
+            isEditable: true
         )
     }
 
@@ -107,16 +109,24 @@ extension ProjectNavigatorViewController: NSOutlineViewDelegate {
         _ outlineView: NSOutlineView,
         itemForPersistentObject object: Any
     ) -> Any? {
-        guard
-            let id = object as? UUID,
-            let node = treeModel?.node(withID: id)
+        // Accept both UUID and String (for flexibility)
+        let uuid: UUID?
+        if let id = object as? UUID {
+            uuid = id
+        } else if let idString = object as? String {
+            uuid = UUID(uuidString: idString)
+        } else {
+            uuid = nil
+        }
+        guard let id = uuid,
+              let node = treeModel?.node(withID: id)
         else {
             return nil
         }
         return node
     }
 
-    /// Store each node’s `UUID` for autosave / collapse/expand state.
+    /// Store each node’s UUID string for autosave / collapse/expand state.
     func outlineView(
         _ outlineView: NSOutlineView,
         persistentObjectForItem item: Any?
@@ -124,6 +134,7 @@ extension ProjectNavigatorViewController: NSOutlineViewDelegate {
         guard let node = item as? ProjectNode else {
             return nil
         }
-        return node.id
+        // Return as String for UserDefaults compatibility
+        return node.id.uuidString
     }
 }

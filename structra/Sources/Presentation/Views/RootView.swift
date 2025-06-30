@@ -14,9 +14,7 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if projectVM.currentProject != nil {
-                WorkspaceView()
-            } else {
+            if projectVM.currentProject == nil {
                 WelcomeView()
             }
         }
@@ -38,8 +36,11 @@ struct RootView: View {
 
             // Open the editor window if a project is set and we haven't already
             if newProject != nil && !didOpenEditor {
-                WorkspaceSession(projectURL: projectVM.currentProject!.url).showWindow()
+                WorkspaceSession(projectURL: projectVM.currentProject!.url)
+                    .showWindow()
                 didOpenEditor = true
+
+                win.close()
             }
         }
     }

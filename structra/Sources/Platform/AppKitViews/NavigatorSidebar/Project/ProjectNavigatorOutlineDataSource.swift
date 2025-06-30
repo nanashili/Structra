@@ -1,11 +1,3 @@
-//
-//  ProjectNavigatorOutlineDataSource.swift
-//  structra
-//
-//  Created by Tihan-Nico Paxton on 6/22/25.
-//  Updated on 2025/06/26 to drive outline from `ProjectNode`.
-//
-
 import AppKit
 import OSLog
 
@@ -18,8 +10,12 @@ extension ProjectNavigatorViewController: NSOutlineViewDataSource {
         numberOfChildrenOfItem item: Any?
     ) -> Int {
         if let node = item as? ProjectNode {
+            logger.info(
+                "numberOfChildrenOfItem: \(node.name, privacy: .public) -> \(node.children.count)"
+            )
             return node.children.count
         }
+        logger.info("numberOfChildrenOfItem: root -> \(self.rootNodes.count)")
         return rootNodes.count
     }
 
@@ -30,9 +26,15 @@ extension ProjectNavigatorViewController: NSOutlineViewDataSource {
         ofItem item: Any?
     ) -> Any {
         if let node = item as? ProjectNode {
-            return node.children[index]
+            let child = node.children[index]
+            logger.info(
+                "child: \(node.name, privacy: .public) [\(index)] -> \(child.name, privacy: .public)"
+            )
+            return child
         }
-        return rootNodes[index]
+        let child = rootNodes[index]
+        logger.info("child: root [\(index)] -> \(child.name, privacy: .public)")
+        return child
     }
 
     /// Folders are expandable; files are not.
@@ -41,9 +43,14 @@ extension ProjectNavigatorViewController: NSOutlineViewDataSource {
         isItemExpandable item: Any
     ) -> Bool {
         guard let node = item as? ProjectNode else {
+            logger.info("isItemExpandable: (not a ProjectNode) -> false")
             return false
         }
-        return node.type.isFolder
+        let expandable = node.type.isFolder
+        logger.info(
+            "isItemExpandable: \(node.name, privacy: .public) -> \(expandable)"
+        )
+        return expandable
     }
 
     // MARK: – Drag & Drop

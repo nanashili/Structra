@@ -120,7 +120,6 @@ public final class ProjectTreeModel: ObservableObject {
     /// Remove a file/folder (and its subtree) from the tree.
     private func removeNode(atPath path: String) {
         guard let node = nodesByPath[path] else { return }
-        let oldParentID = node.parent?.id
 
         node.removeFromParent()
         if node.parent == nil {

@@ -27,7 +27,6 @@
 		A058ED6C2DFE0C39005E0480 /* structra.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = structra.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A058ED792DFE0C3B005E0480 /* structraTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = structraTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A058ED832DFE0C3B005E0480 /* structraUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = structraUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A0E709B72DFECD3B0087D463 /* Update-Service */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = "Update-Service"; path = "../Update-Service"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -76,7 +75,6 @@
 		A058ED632DFE0C39005E0480 = {
 			isa = PBXGroup;
 			children = (
-				A0E709B72DFECD3B0087D463 /* Update-Service */,
 				A058ED6E2DFE0C39005E0480 /* structra */,
 				A058ED7C2DFE0C3B005E0480 /* structraTests */,
 				A058ED862DFE0C3B005E0480 /* structraUITests */,
@@ -197,6 +195,8 @@
 			);
 			mainGroup = A058ED632DFE0C39005E0480;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A058ED6D2DFE0C39005E0480 /* Products */;
 			projectDirPath = "";
@@ -401,6 +401,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = structra/Resources/Assets.xcassets;
 				DEVELOPMENT_TEAM = 32X8TT6Y3C;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -434,6 +435,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = structra/Resources/Assets.xcassets;
 				DEVELOPMENT_TEAM = 32X8TT6Y3C;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;

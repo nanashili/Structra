@@ -125,12 +125,6 @@ final class EditorWindowController: NSWindowController {
             let firstDividerPos = navigationSidebarWidth
             let secondDividerPos = navigationSidebarWidth + workspaceSidebarWidth
 
-            self.window?.setContentSize(
-                CGSize(
-                    width: 350,
-                    height: 600
-                )
-            )
             self.splitViewController.splitView.setPosition(firstDividerPos, ofDividerAt: 0)
             self.splitViewController.splitView.setPosition(secondDividerPos, ofDividerAt: 1)
             self.splitViewController.splitView.layoutSubtreeIfNeeded()

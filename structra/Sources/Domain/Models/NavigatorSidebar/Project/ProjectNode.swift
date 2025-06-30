@@ -77,6 +77,31 @@ public final class ProjectNode: Identifiable {
 
         // Wire each child’s `parent` pointer back to this node.
         self.children.forEach { $0.parent = self }
+
+        if type.isFolder && children.isEmpty {
+            do {
+                let contents = try FileManager.default.contentsOfDirectory(
+                    at: url,
+                    includingPropertiesForKeys: nil
+                )
+                .filter { !$0.lastPathComponent.hasPrefix(".") }  // Optionally skip hidden files
+                self.children = contents.map {
+                    let childType: ProjectItemType =
+                        $0.hasDirectoryPath
+                        ? .folder(customIconName: "")
+                        : .file(customIconName: "")
+                    let child = ProjectNode(
+                        url: $0,
+                        name: $0.lastPathComponent,
+                        type: childType
+                    )
+                    child.parent = self
+                    return child
+                }
+            } catch {
+                self.children = []
+            }
+        }
     }
 
     // MARK: Build & Snapshot
