@@ -1,0 +1,29 @@
+//
+//  SwiftParser.swift
+//  structra
+//
+//  Created by Nanashi Li on 7/3/25.
+//
+
+import Foundation
+
+struct SwiftParser: LanguageProfile {
+    private static let importKeywords = [[UInt8]("import ".utf8)]
+    private static let symbolKeywords = [
+        [UInt8]("class ".utf8), [UInt8]("struct ".utf8), [UInt8]("enum ".utf8),
+        [UInt8]("protocol ".utf8), [UInt8]("actor ".utf8),
+        [UInt8]("func ".utf8), [UInt8]("extension ".utf8),
+    ]
+    func extractImports(from data: Data) -> [String] {
+        ByteParserUtils.extractImports(
+            from: data,
+            keywords: Self.importKeywords
+        )
+    }
+    func extractSymbols(from data: Data) -> [String] {
+        ByteParserUtils.extractSymbols(
+            from: data,
+            keywords: Self.symbolKeywords
+        )
+    }
+}

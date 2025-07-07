@@ -2,14 +2,13 @@
 //  ProjectListViewModel.swift
 //  structra
 //
-//  Created by Tihan-Nico Paxton on 6/18/25.
+//  Created by Nanashi Li on 6/18/25.
 //
 
 import AppKit
 import Combine
 import Foundation
 
-@MainActor
 final class ProjectListViewModel: ObservableObject {
     @Published var recentProjects: [Project] = []
     @Published var currentProject: Project?
@@ -26,8 +25,9 @@ final class ProjectListViewModel: ObservableObject {
         self.projectService = projectService
         self.workspaceManager = workspaceManager
 
-        // Observe session changes
+        // Observe session changes from the WorkspaceManager
         workspaceManager.$currentSession
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] session in
                 guard let self = self else { return }
                 if let session = session {
@@ -37,6 +37,7 @@ final class ProjectListViewModel: ObservableObject {
                         url: session.projectURL
                     )
                     self.currentProject = project
+                    // Add to recents if it's not already there
                     if !self.recentProjects.contains(where: {
                         $0.url == project.url
                     }) {
@@ -53,12 +54,10 @@ final class ProjectListViewModel: ObservableObject {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "MyProject"
         panel.canCreateDirectories = true
+
         if panel.runModal() == .OK, let url = panel.url {
-            Task { @MainActor in
-                do {
-                    try await workspaceManager.createAndOpenProject(at: url)
-                    // No need to call showEditorWindow here; handled by session observer
-                } catch {
+            workspaceManager.createAndOpenProject(at: url) { error in
+                if let error = error {
                     print("Failed to create project:", error)
                 }
             }
@@ -70,10 +69,9 @@ final class ProjectListViewModel: ObservableObject {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
+
         if panel.runModal() == .OK, let url = panel.url {
-            Task { @MainActor in
-                workspaceManager.openProject(at: url)
-            }
+            workspaceManager.openProject(at: url)
         }
     }
 }

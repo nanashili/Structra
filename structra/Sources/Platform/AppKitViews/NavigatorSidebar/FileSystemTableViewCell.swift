@@ -154,3 +154,10 @@ extension String {
         return hidden ? self.deletingPathExtension : self
     }
 }
+
+extension FileSystemTableViewCell {
+    @MainActor
+    func beginEditing() {
+        self.window?.makeFirstResponder(self.textField)
+    }
+}

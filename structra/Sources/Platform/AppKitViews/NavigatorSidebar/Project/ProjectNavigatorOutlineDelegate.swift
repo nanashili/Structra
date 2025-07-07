@@ -2,7 +2,7 @@
 //  ProjectNavigatorOutlineDelegate.swift
 //  structra
 //
-//  Created by Tihan-Nico Paxton on 6/22/25.
+//  Created by Nanashi Li on 6/22/25.
 //  Updated 2025/06/26 to use ProjectNode & WorkspaceSession.
 //
 

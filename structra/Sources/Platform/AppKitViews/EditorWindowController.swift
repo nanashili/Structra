@@ -2,15 +2,12 @@
 //  EditorWindowController.swift
 //  structra
 //
-//  Created by Tihan-Nico Paxton on 6/26/25.
+//  Created by Nanashi Li on 6/26/25.
 //
 
-
-import SwiftUI
 import Combine
+import SwiftUI
 
-/// The window controller for Aurora Editor.
-@MainActor
 final class EditorWindowController: NSWindowController {
 
     /// The set of cancelables.
@@ -23,14 +20,12 @@ final class EditorWindowController: NSWindowController {
     }
 
     /// Creates a new instance of the window controller.
-    /// 
+    ///
     /// - Parameter window: The window.
-    /// - Parameter workspace: The workspace document.
     init(window: NSWindow) {
         super.init(window: window)
 
         setupSplitView()
-
         updateLayoutOfWindowAndSplitView()
     }
 
@@ -41,8 +36,6 @@ final class EditorWindowController: NSWindowController {
     }
 
     /// Setup split view.
-    /// 
-    /// - Parameter workspace: The workspace document.
     private func setupSplitView() {
         let splitVC = EditorSplitViewController()
         splitVC.splitView.autosaveName = "MainSplitView"
@@ -69,7 +62,11 @@ final class EditorWindowController: NSWindowController {
         splitVC.addSplitViewItem(navigator)
 
         // Workspace (Main Content)
-        let workspaceView = WorkspaceView()
+        let workspace = WorkspaceManager.shared
+        let workspaceView = WorkspaceView(session: workspace.currentSession!)
+            .environmentObject(
+                workspace
+            )
         let workspaceViewController = NSHostingController(
             rootView: workspaceView
         )
@@ -117,16 +114,21 @@ final class EditorWindowController: NSWindowController {
     @objc
     private func updateLayoutOfWindowAndSplitView() {
         DispatchQueue.main.async { [weak self] in
-            guard let self else {
-                return
-            }
+            guard let self = self else { return }
             let navigationSidebarWidth = 350.0
             let workspaceSidebarWidth = 350.0
             let firstDividerPos = navigationSidebarWidth
-            let secondDividerPos = navigationSidebarWidth + workspaceSidebarWidth
+            let secondDividerPos =
+                navigationSidebarWidth + workspaceSidebarWidth
 
-            self.splitViewController.splitView.setPosition(firstDividerPos, ofDividerAt: 0)
-            self.splitViewController.splitView.setPosition(secondDividerPos, ofDividerAt: 1)
+            self.splitViewController.splitView.setPosition(
+                firstDividerPos,
+                ofDividerAt: 0
+            )
+            self.splitViewController.splitView.setPosition(
+                secondDividerPos,
+                ofDividerAt: 1
+            )
             self.splitViewController.splitView.layoutSubtreeIfNeeded()
         }
     }

@@ -2,7 +2,7 @@
 //  ProjectNavigatorViewController.swift
 //  structra
 //
-//  Created by Tihan-Nico Paxton on 6/22/25.
+//  Created by Nanashi Li on 6/22/25.
 //
 
 import AppKit
@@ -29,6 +29,7 @@ final class ProjectNavigatorViewController: NSViewController {
 
     private var scrollView: NSScrollView!
     private var outlineView: NSOutlineView!
+    private var contextMenu: ProjectNavigatorMenu!
 
     // MARK: – State
 
@@ -51,7 +52,6 @@ final class ProjectNavigatorViewController: NSViewController {
     // MARK: – View Lifecycle
 
     override func loadView() {
-        // 1) Build scrollView + outlineView
         scrollView = NSScrollView()
         outlineView = NSOutlineView(frame: .zero)
         scrollView.documentView = outlineView
@@ -67,11 +67,9 @@ final class ProjectNavigatorViewController: NSViewController {
         scrollView.autohidesScrollers = true
         self.view = scrollView
 
-        // 2) Configure outlineView
         outlineView.headerView = nil
         outlineView.rowHeight = rowHeight
 
-        // autosave expansions under a key unique per-project
         outlineView.autosaveExpandedItems = true
         outlineView.autosaveName =
             workspaceManager?
@@ -82,12 +80,18 @@ final class ProjectNavigatorViewController: NSViewController {
         outlineView.registerForDraggedTypes([.fileURL])
         outlineView.doubleAction = #selector(onItemDoubleClicked(_:))
 
-        // Single, invisible column
+        if let workspaceManager = self.workspaceManager {
+            contextMenu = ProjectNavigatorMenu(
+                sender: outlineView,
+                workspaceManager: workspaceManager
+            )
+            outlineView.menu = contextMenu
+        }
+
         let col = NSTableColumn(identifier: .init("Cell"))
         col.title = ""
         outlineView.addTableColumn(col)
 
-        // 3) Wire model & selection subscriptions
         subscribeToModel()
     }
 
@@ -102,7 +106,6 @@ final class ProjectNavigatorViewController: NSViewController {
     private func subscribeToModel() {
         guard let session = workspaceManager?.currentSession else { return }
 
-        // 1) Reload & restore expansion whenever rootNodes array changes
         session.treeModel.$rootNodes
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -111,21 +114,78 @@ final class ProjectNavigatorViewController: NSViewController {
             }
             .store(in: &cancelables)
 
-        // 2) Incremental updates on file events
         session.treeModel.changePublisher
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.outlineView.reloadData()
+            .sink { [weak self] change in
+                self?.handleTreeChange(change)
             }
             .store(in: &cancelables)
 
-        // 3) Reflect session.selectedNodeID in the outline selection
         session.$selectedNodeID
             .receive(on: DispatchQueue.main)
             .sink { [weak self] nodeId in
                 self?.updateSelection(to: nodeId)
             }
             .store(in: &cancelables)
+    }
+
+    // MARK: - Change Handling
+
+    private func handleTreeChange(_ change: NodeChangeEvent) {
+        outlineView.beginUpdates()
+        switch change {
+        case .added(let node, let parentID):
+            if let parent = parentID.flatMap({ treeModel?.node(withID: $0) }),
+                let index = parent.children.firstIndex(where: {
+                    $0.id == node.id
+                })
+            {
+                outlineView.insertItems(
+                    at: [index],
+                    inParent: parent,
+                    withAnimation: .effectFade
+                )
+            } else if let index = rootNodes.firstIndex(where: {
+                $0.id == node.id
+            }) {
+                outlineView.insertItems(
+                    at: [index],
+                    inParent: nil,
+                    withAnimation: .effectFade
+                )
+            }
+
+        case .removed(_, let parentID, let fromIndex):
+            let parentItem = parentID.flatMap { treeModel?.node(withID: $0) }
+
+            outlineView.removeItems(
+                at: [fromIndex],
+                inParent: parentItem,
+                withAnimation: .effectFade
+            )
+
+        case .moved(let nodeID, let fromParentID, let toParentID):
+            if treeModel?.node(withID: nodeID) != nil {
+                let fromParent = fromParentID.flatMap {
+                    treeModel?.node(withID: $0)
+                }
+                let toParent = toParentID.flatMap {
+                    treeModel?.node(withID: $0)
+                }
+                outlineView.reloadItem(fromParent, reloadChildren: true)
+                outlineView.reloadItem(toParent, reloadChildren: true)
+            }
+
+        case .renamed(let nodeID, _, _), .metadataUpdated(let nodeID, _):
+            if let node = treeModel?.node(withID: nodeID) {
+                outlineView.reloadItem(node, reloadChildren: false)
+            }
+
+        case .reloaded(let parentID):
+            let parent = parentID.flatMap { treeModel?.node(withID: $0) }
+            outlineView.reloadItem(parent, reloadChildren: true)
+        }
+        outlineView.endUpdates()
     }
 
     // MARK: – Data Helpers
@@ -145,7 +205,6 @@ final class ProjectNavigatorViewController: NSViewController {
         else { return }
 
         if node.type.isFolder {
-            // Expand/collapse & persist
             if outlineView.isItemExpanded(node) {
                 outlineView.collapseItem(node)
                 node.isExpanded = false
@@ -154,7 +213,6 @@ final class ProjectNavigatorViewController: NSViewController {
                 node.isExpanded = true
             }
         } else {
-            // Leaf: open in editor
             workspaceManager?.currentSession?.openFile(at: node.url)
         }
     }
@@ -171,9 +229,7 @@ final class ProjectNavigatorViewController: NSViewController {
 
     private func saveExpansion(for node: ProjectNode) {
         guard node.type.isFolder else { return }
-        // Record whether the outline is currently expanded
         node.isExpanded = outlineView.isItemExpanded(node)
-        // Recurse into children
         for child in node.children {
             saveExpansion(for: child)
         }
@@ -189,9 +245,9 @@ final class ProjectNavigatorViewController: NSViewController {
     private func restoreExpansion(for node: ProjectNode) {
         guard node.type.isFolder else { return }
         if node.isExpanded {
-            outlineView.expandItem(node)
+            outlineView.expandItem(node, expandChildren: false)
         } else {
-            outlineView.collapseItem(node)
+            outlineView.collapseItem(node, collapseChildren: false)
         }
         node.children.forEach { restoreExpansion(for: $0) }
     }
@@ -200,25 +256,30 @@ final class ProjectNavigatorViewController: NSViewController {
 
     public func updateSelection(to nodeId: UUID?) {
         guard !isUpdatingSelection else { return }
-        guard let id = nodeId else {
+
+        guard let id = nodeId, let node = treeModel?.node(withID: id) else {
             outlineView.deselectAll(nil)
             return
         }
-        select(nodeId: id, in: rootNodes)
-    }
 
-    private func select(nodeId: UUID, in nodes: [ProjectNode]) {
-        for node in nodes {
-            if node.id == nodeId {
-                let row = outlineView.row(forItem: node)
-                guard row >= 0 else { continue }
-                isUpdatingSelection = true
-                outlineView.selectRowIndexes([row], byExtendingSelection: false)
-                outlineView.scrollRowToVisible(row)
-                isUpdatingSelection = false
-                return
+        let row = outlineView.row(forItem: node)
+
+        // If row is -1, the item might be inside a collapsed folder.
+        // We need to expand its parents first.
+        if row < 0 {
+            var currentParent = node.parent
+            while let parent = currentParent {
+                outlineView.expandItem(parent)
+                currentParent = parent.parent
             }
-            select(nodeId: nodeId, in: node.children)
         }
+
+        let finalRow = outlineView.row(forItem: node)
+        guard finalRow >= 0 else { return }
+
+        isUpdatingSelection = true
+        outlineView.selectRowIndexes([finalRow], byExtendingSelection: false)
+        outlineView.scrollRowToVisible(finalRow)
+        isUpdatingSelection = false
     }
 }

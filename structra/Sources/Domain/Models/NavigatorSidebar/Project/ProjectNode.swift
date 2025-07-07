@@ -2,7 +2,7 @@
 //  ProjectNode.swift
 //  structra
 //
-//  Created by Tihan-Nico Paxton on 6/22/25.
+//  Created by Nanashi Li on 6/22/25.
 //
 
 import Foundation
@@ -10,14 +10,11 @@ import Observation
 
 /// A single element in the project tree: either a folder or a file.
 ///
-/// - `@MainActor` guarantees that all property accesses and mutations
-///   occur on the main thread (no data races).
 /// - `@Observable` (SwiftData/SwiftUI macro) auto-generates publishers for
 ///   all mutable properties, so UI can react to changes automatically.
 ///
 /// Conforms to `Identifiable` for diffable data sources and SwiftUI collection APIs.
 @Observable
-@MainActor
 public final class ProjectNode: Identifiable {
     // MARK: Properties
 
@@ -25,7 +22,7 @@ public final class ProjectNode: Identifiable {
     public let id: UUID
 
     /// The file-system URL this node represents.
-    public let url: URL
+    public var url: URL
 
     /// Display name for UI; typically `url.lastPathComponent`.
     public var name: String
@@ -45,6 +42,9 @@ public final class ProjectNode: Identifiable {
 
     /// Weak back-pointer to the parent node (`nil` for root nodes).
     public weak var parent: ProjectNode?
+
+    var sortDescriptor: SortDescriptor = .name
+    var sortDirection: SortDirection = .ascending
 
     // MARK: Initialization
 

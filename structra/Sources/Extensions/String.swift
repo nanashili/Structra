@@ -2,7 +2,7 @@
 //  String.swift
 //  structra
 //
-//  Created by Tihan-Nico Paxton on 6/30/25.
+//  Created by Nanashi Li on 6/30/25.
 //
 
 import CryptoKit
@@ -15,4 +15,8 @@ extension String {
         let hash = SHA256.hash(data: data)
         return hash.compactMap { String(format: "%02x", $0) }.joined()
     }
+}
+
+extension String.SubSequence {
+    var string: String { String(self) }
 }

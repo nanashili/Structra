@@ -2,7 +2,7 @@
 //  ProjectItemType.swift
 //  structra
 //
-//  Created by Tihan-Nico Paxton on 6/22/25.
+//  Created by Nanashi Li on 6/22/25.
 //
 
 import Foundation
@@ -13,13 +13,13 @@ import Foundation
 /// - `file(customIconName:)`
 ///
 /// Conforms to `Codable` so that the tree can be serialized/deserialized.
-public enum ProjectItemType: @preconcurrency Codable, Equatable {
+public enum ProjectItemType: Codable, Equatable {
     /// A directory node.
     case folder(customIconName: String?)
     /// A file node.
     case file(customIconName: String?)
 
-    private enum CodingKeys: String, @preconcurrency CodingKey {
+    private enum CodingKeys: String, CodingKey {
         case kind, icon
     }
     private enum Kind: String, Codable { case folder, file }

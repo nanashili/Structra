@@ -2,7 +2,7 @@
 //  NodeMetadata.swift
 //  structra
 //
-//  Created by Tihan-Nico Paxton on 6/22/25.
+//  Created by Nanashi Li on 6/22/25.
 //
 
 import Foundation
@@ -13,7 +13,7 @@ import Foundation
 /// - Conforms to `Equatable` for easy diffing and change detection.
 ///
 /// Extend with additional fields (permissions, owner, checksums) as needed.
-public struct NodeMetadata: @preconcurrency Codable, Equatable {
+public struct NodeMetadata: Codable, Equatable, Sendable {
     /// File size in bytes. `nil` for folders or if not yet loaded.
     public var fileSize: Int64?
     /// Creation timestamp. `nil` if unavailable.
@@ -37,18 +37,18 @@ public struct NodeMetadata: @preconcurrency Codable, Equatable {
     ///   - isReadOnly: Read‐only flag.
     ///   - tags: Custom search tags.
     public init(
-        fileSize: Int64?      = nil,
-        creationDate: Date?   = nil,
-        modifiedDate: Date?   = nil,
-        fileType: String?     = nil,
-        isReadOnly: Bool      = false,
-        tags: [String]        = []
+        fileSize: Int64? = nil,
+        creationDate: Date? = nil,
+        modifiedDate: Date? = nil,
+        fileType: String? = nil,
+        isReadOnly: Bool = false,
+        tags: [String] = []
     ) {
-        self.fileSize     = fileSize
+        self.fileSize = fileSize
         self.creationDate = creationDate
         self.modifiedDate = modifiedDate
-        self.fileType     = fileType
-        self.isReadOnly   = isReadOnly
-        self.tags         = tags
+        self.fileType = fileType
+        self.isReadOnly = isReadOnly
+        self.tags = tags
     }
 }

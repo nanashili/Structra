@@ -2,7 +2,7 @@
 //  NodeChangeEvent.swift
 //  structra
 //
-//  Created by Tihan-Nico Paxton on 6/22/25.
+//  Created by Nanashi Li on 6/22/25.
 //
 
 import Foundation
@@ -11,8 +11,9 @@ import Foundation
 /// UI layers (SwiftUI/AppKit) can subscribe to this and apply animations.
 public enum NodeChangeEvent {
     case added(node: ProjectNode, parentID: UUID?)
-    case removed(nodeID: UUID)
+    case removed(nodeID: UUID, parentID: UUID?, fromIndex: Int)
     case moved(nodeID: UUID, fromParentID: UUID?, toParentID: UUID?)
     case renamed(nodeID: UUID, oldName: String, newName: String)
     case metadataUpdated(nodeID: UUID, metadata: NodeMetadata)
+    case reloaded(parentID: UUID?)
 }
