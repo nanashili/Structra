@@ -10,126 +10,138 @@ import SwiftUI
 
 final class EditorWindowController: NSWindowController {
 
-    /// The set of cancelables.
-    var cancelables: Set<AnyCancellable> = .init()
+    private var cancellables: Set<AnyCancellable> = .init()
 
-    /// The split view controller.
-    var splitViewController: EditorSplitViewController! {
-        get { contentViewController as? EditorSplitViewController }
-        set { contentViewController = newValue }
-    }
+    // MARK: - Initialization
 
-    /// Creates a new instance of the window controller.
-    ///
-    /// - Parameter window: The window.
     init(window: NSWindow) {
         super.init(window: window)
+        window.delegate = self
 
-        setupSplitView()
-        updateLayoutOfWindowAndSplitView()
+        self.contentViewController = Self.createSplitViewController()
+        setupToolbar()
     }
 
-    /// Creates a new instance of the window controller.
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
-    /// Setup split view.
-    private func setupSplitView() {
-        let splitVC = EditorSplitViewController()
+    // MARK: - Lifecycle
+
+    override func close() {
+        super.close()
+        cancellables.forEach { $0.cancel() }
+    }
+
+    // MARK: - Toolbar Setup
+
+    private func setupToolbar() {
+        guard let window = self.window else { return }
+
+        let toolbar = NSToolbar(identifier: "StructraEditorToolbar")
+        toolbar.delegate = self
+        toolbar.displayMode = .labelOnly
+
+        toolbar.allowsUserCustomization = false
+        toolbar.autosavesConfiguration = true
+
+        window.toolbar = toolbar
+        window.toolbarStyle = .unifiedCompact
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = false
+    }
+
+    // MARK: - View Factory Methods
+
+    private static func createSplitViewController() -> NSSplitViewController {
+        let splitVC = NSSplitViewController()
         splitVC.splitView.autosaveName = "MainSplitView"
         splitVC.splitView.dividerStyle = .thin
         splitVC.splitView.isVertical = true
+        splitVC.addSplitViewItem(makeNavigatorItem())
+        splitVC.addSplitViewItem(makeMainContentItem())
+        splitVC.addSplitViewItem(makeInspectorItem())
+        return splitVC
+    }
 
-        // Navigator Sidebar
+    private static func makeNavigatorItem() -> NSSplitViewItem {
         let navigatorView = NavigatorSidebar()
-        let navigationViewController = NSHostingController(
+        let viewController = NSHostingController(
             rootView: navigatorView
         )
-        let navigator = NSSplitViewItem(
-            sidebarWithViewController: navigationViewController
+        viewController.identifier = .navigatorSidebar
+        let splitViewItem = NSSplitViewItem(
+            sidebarWithViewController: viewController
         )
-        navigator.titlebarSeparatorStyle = .none
-        navigator.minimumThickness = 200
-        navigator.maximumThickness = 400
-        navigator.collapseBehavior = .useConstraints
-        navigator.canCollapse = true
-        navigator.isSpringLoaded = true
-        navigator.holdingPriority = NSLayoutConstraint.Priority(
-            NSLayoutConstraint.Priority.defaultLow.rawValue + 1
-        )
-        splitVC.addSplitViewItem(navigator)
+        splitViewItem.minimumThickness = 200
+        splitViewItem.maximumThickness = 400
+        splitViewItem.canCollapse = true
+        splitViewItem.isCollapsed = false
+        splitViewItem.holdingPriority = .defaultLow + 1
+        return splitViewItem
+    }
 
-        // Workspace (Main Content)
+    private static func makeMainContentItem() -> NSSplitViewItem {
         let workspace = WorkspaceManager.shared
-        let workspaceView = WorkspaceView(session: workspace.currentSession!)
-            .environmentObject(
-                workspace
+        let rootView: AnyView
+        if let session = workspace.currentSession {
+            rootView = AnyView(
+                WorkspaceView(session: session).environmentObject(workspace)
             )
-        let workspaceViewController = NSHostingController(
-            rootView: workspaceView
-        )
-        let mainContent = NSSplitViewItem(
-            viewController: workspaceViewController
-        )
-        mainContent.titlebarSeparatorStyle = .line
-        mainContent.holdingPriority = .defaultLow
-        splitVC.addSplitViewItem(mainContent)
+        } else {
+            rootView = AnyView(
+                Text("No Workspace Open").font(.title).foregroundColor(
+                    .secondary
+                )
+            )
+        }
+        let viewController = NSHostingController(rootView: rootView)
+        let splitViewItem = NSSplitViewItem(viewController: viewController)
+        splitViewItem.titlebarSeparatorStyle = .line
+        splitViewItem.holdingPriority = .defaultLow
+        return splitViewItem
+    }
 
-        // Inspector Sidebar
+    private static func makeInspectorItem() -> NSSplitViewItem {
         let inspectorView = InspectorSidebar()
-        let inspectorViewController = NSHostingController(
+        let viewController = NSHostingController(
             rootView: inspectorView
         )
-        let inspector = NSSplitViewItem(
-            inspectorWithViewController: inspectorViewController
+        viewController.identifier = .inspectorSidebar
+        let splitViewItem = NSSplitViewItem(
+            inspectorWithViewController: viewController
         )
-        inspector.titlebarSeparatorStyle = .none
-        inspector.minimumThickness = 200
-        inspector.maximumThickness = 400
-        inspector.canCollapse = true
-        inspector.collapseBehavior = .useConstraints
-        inspector.isSpringLoaded = true
-        inspector.isCollapsed = false
-        inspector.holdingPriority = NSLayoutConstraint.Priority(
-            NSLayoutConstraint.Priority.defaultLow.rawValue + 1
-        )
-        splitVC.addSplitViewItem(inspector)
+        splitViewItem.minimumThickness = 200
+        splitViewItem.maximumThickness = 400
+        splitViewItem.canCollapse = true
+        splitViewItem.isCollapsed = true
+        splitViewItem.holdingPriority = .defaultLow + 1
+        return splitViewItem
+    }
+}
 
-        // Set up the initial sidebar states
-        splitVC.toggleSidebar(navigator)
-        splitVC.toggleSidebar(inspector)
+// MARK: - NSWindowDelegate
+extension EditorWindowController: NSWindowDelegate {
 
-        self.splitViewController = splitVC
+    func windowWillReturnToolbar(_ window: NSWindow) -> NSToolbar? {
+        return window.toolbar
     }
 
-    /// Close the window.
-    override func close() {
-        super.close()
-        cancelables.forEach({ $0.cancel() })
+    func windowDidBecomeKey(_ notification: Notification) {
+        // Ensure toolbar items are properly validated when window becomes key
+        window?.toolbar?.validateVisibleItems()
     }
 
-    /// Update the layout of the window and split view.
-    @objc
-    private func updateLayoutOfWindowAndSplitView() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            let navigationSidebarWidth = 350.0
-            let workspaceSidebarWidth = 350.0
-            let firstDividerPos = navigationSidebarWidth
-            let secondDividerPos =
-                navigationSidebarWidth + workspaceSidebarWidth
+    func windowDidResignKey(_ notification: Notification) {
+        // Optional: Handle when window loses key status
+    }
+}
 
-            self.splitViewController.splitView.setPosition(
-                firstDividerPos,
-                ofDividerAt: 0
-            )
-            self.splitViewController.splitView.setPosition(
-                secondDividerPos,
-                ofDividerAt: 1
-            )
-            self.splitViewController.splitView.layoutSubtreeIfNeeded()
-        }
+extension NSLayoutConstraint.Priority {
+    fileprivate static func + (left: NSLayoutConstraint.Priority, right: Float)
+        -> NSLayoutConstraint.Priority
+    {
+        return NSLayoutConstraint.Priority(left.rawValue + right)
     }
 }

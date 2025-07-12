@@ -52,7 +52,11 @@ public final class WorkspaceSession: ObservableObject {
         return watcher
     }()
     private var autosaveCancellable: AnyCancellable?
-    private var windowController: EditorWindowController?
+    private var windowController: EditorWindowController? {
+        didSet {
+            oldValue?.close()
+        }
+    }
     private var excludePatterns: [String]?
 
     // MARK: – Initialization
@@ -245,11 +249,19 @@ public final class WorkspaceSession: ObservableObject {
         window.minSize = CGSize(width: 600, height: 400)
 
         let controller = EditorWindowController(window: window)
+
         self.windowController = controller
+
+        window.delegate = controller
         controller.showWindow(self)
 
         window.setContentSize(initialSize)
         window.center()
+
+        // Debug: Verify the controller is retained
+        print(
+            "Window controller retained: \(String(describing: self.windowController))"
+        )
     }
 
     public func closeWindow() {
@@ -297,7 +309,7 @@ public final class WorkspaceSession: ObservableObject {
         saveSelectionState()
         watcher.stop()
         autosaveCancellable?.cancel()
-        closeWindow()
+        closeWindow()  // This will set windowController to nil
     }
 
     // MARK: – Navigator Integration

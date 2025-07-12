@@ -18,7 +18,10 @@ public final class WorkspaceManager: ObservableObject {
     public func openProject(at url: URL) {
         precondition(Thread.isMainThread, "Must be called on the main thread.")
         currentSession?.close()
-        currentSession = WorkspaceSession(projectURL: url)
+        let session = WorkspaceSession(projectURL: url)
+        currentSession = session
+
+        session.showWindow()
     }
 
     /// Create a new project at the given URL, then open it.
@@ -48,13 +51,11 @@ public final class WorkspaceManager: ObservableObject {
                     )
                 }
 
-                // Switch back to the main thread to open the project and complete.
                 DispatchQueue.main.async {
                     self.openProject(at: url)
                     completion(nil)
                 }
             } catch {
-                // Switch back to the main thread to report the error.
                 DispatchQueue.main.async {
                     completion(error)
                 }
