@@ -2,7 +2,7 @@
 //  ProjectNavigator.swift
 //  structra
 //
-//  Created by Tihan-Nico Paxton on 6/26/25.
+//  Created by Nanashi Li on 6/26/25.
 //
 
 import SwiftUI

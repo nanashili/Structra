@@ -5,299 +5,188 @@
 //  Created by Tihan-Nico Paxton on 6/22/25.
 //
 
+import AppKit
 import SwiftUI
 
-/// A standard table cell view that is used in the navigator sidebar.
+/// Custom NSTableCellView with icon, two labels, and a status indicator.
 class StandardTableViewCell: NSTableCellView {
 
-    /// The label of the cell
-    var label: NSTextField!
+    // MARK: - View Components
 
-    /// The secondary label of the cell
-    var secondaryLabel: NSTextField!
+    let label: NSTextField  // Main label (editable optionally)
+    let secondaryLabel: NSTextField  // Secondary text (right-aligned)
+    let fileIcon: NSImageView  // File icon on the left
+    let staleDocumentationIndicator: NSImageView  // Stale data warning (right side)
 
-    /// The icon of the cell
-    var fileIcon: NSImageView!
+    // MARK: - Initialization
 
-    /// The arrow down icon next to the secondary label
-    var upstreamChangesPullIcon: NSImageView!
-
-    /// The checkbox of the cell
-    var checkbox: NSButton!
-
-    /// The file item the cell represents
-    var secondaryLabelRightAligned: Bool = true {
-        didSet {
-            resizeSubviews(withOldSize: .zero)
-        }
-    }
-
-    /// Initializes the `TableViewCell` with an `icon` and `label`
-    /// Both the icon and label will be colored, and sized based on the user's preferences.
-    ///
-    /// - Parameters:
-    ///   - frameRect: The frame of the cell.
-    ///   - isEditable: Set to true if the user should be able to edit the file name.
-    init(
-        frame frameRect: NSRect,
-        isEditable: Bool = true
-    ) {
-        super.init(frame: frameRect)
-        setupViews(
-            frame: frameRect,
-            isEditable: isEditable
-        )
-    }
-
-    // Default init, assumes isEditable to be false
     override init(frame frameRect: NSRect) {
+        self.fileIcon = Self.createIcon()
+        self.label = Self.createLabel(isEditable: false)
+        self.secondaryLabel = Self.createSecondaryLabel()
+        self.staleDocumentationIndicator = Self.createStaleIndicator()
+
         super.init(frame: frameRect)
-        setupViews(
-            frame: frameRect,
-            isEditable: false
-        )
-    }
 
-    /// Set up the views
-    ///
-    /// - Parameter frameRect: the frame
-    /// - Parameter isEditable: whether the cell is editable
-    private func setupViews(
-        frame frameRect: NSRect,
-        isEditable: Bool
-    ) {
-        // Create the label
-        label = createLabel()
-        configLabel(label: self.label, isEditable: isEditable)
         self.textField = label
+        self.imageView = fileIcon
 
-        // Create the secondary label
-        secondaryLabel = createSecondaryLabel()
-        configSecondaryLabel(
-            secondaryLabel: secondaryLabel,
-            fontSize: 11
-        )
-
-        // Create the main icon
-        fileIcon = createIcon()
-        configIcon(
-            icon: fileIcon,
-            pointSize: fontSize,
-            weight: .regular,
-            scale: .medium
-        )
-
-        // Create the arrow down icon
-        upstreamChangesPullIcon = createIcon()
-        configIcon(
-            icon: upstreamChangesPullIcon,
-            pointSize: 11,
-            weight: .bold,
-            scale: .small
-        )
-
-        // Add subviews
+        // Add all views to the cell
         addSubview(fileIcon)
         addSubview(label)
         addSubview(secondaryLabel)
-        addSubview(upstreamChangesPullIcon)
-
-        imageView = fileIcon
-
-        // Add constraints
-        createConstraints(frame: frameRect)
+        addSubview(staleDocumentationIndicator)
     }
 
-    // MARK: Create and config stuff
-
-    /// Create the label
-    func createLabel() -> NSTextField {
-        return NSTextField(frame: .zero)
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
 
-    /// Configure label
-    ///
-    /// - Parameter label: label
-    /// - Parameter isEditable: whether the cell is editable
-    func configLabel(label: NSTextField, isEditable: Bool) {
-        label.translatesAutoresizingMaskIntoConstraints = false
+    // MARK: - Cell Configuration
+
+    /// Populates the cell with content and styles.
+    func configure(
+        labelText: String,
+        labelIsEditable: Bool,
+        icon: NSImage?,
+        iconColor: NSColor,
+        secondaryText: String,
+        isDocumentationStale: Bool
+    ) {
+        label.stringValue = labelText
+        label.isEditable = labelIsEditable
+        label.isSelectable = labelIsEditable
+
+        fileIcon.image = icon
+        fileIcon.contentTintColor = iconColor
+
+        secondaryLabel.stringValue = secondaryText
+        staleDocumentationIndicator.isHidden = !isDocumentationStale
+
+        needsLayout = true
+    }
+
+    /// Prepares cell for reuse by clearing dynamic content.
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        staleDocumentationIndicator.isHidden = true
+        secondaryLabel.stringValue = ""
+        label.backgroundColor = .clear
+    }
+
+    // MARK: - Manual Layout
+
+    /// Optimized manual layout of all subviews.
+    override func layout() {
+        super.layout()
+
+        let bounds = self.bounds
+        let iconSize = NSSize(width: 16, height: 16)
+        let padding: CGFloat = 4.0
+        let totalHeight = bounds.height
+
+        // File icon on the far left
+        let iconY = (totalHeight - iconSize.height) / 2
+        fileIcon.frame = NSRect(
+            x: padding,
+            y: iconY,
+            width: iconSize.width,
+            height: iconSize.height
+        )
+
+        // Warning icon on the far right
+        let staleIndicatorSize =
+            staleDocumentationIndicator.isHidden
+            ? .zero : NSSize(width: 14, height: 14)
+        let staleIndicatorY = (totalHeight - staleIndicatorSize.height) / 2
+        staleDocumentationIndicator.frame = NSRect(
+            x: bounds.width - staleIndicatorSize.width - padding,
+            y: staleIndicatorY,
+            width: staleIndicatorSize.width,
+            height: staleIndicatorSize.height
+        )
+
+        // Secondary label before warning icon
+        let secondaryLabelSize = secondaryLabel.sizeThatFits(
+            NSSize(width: .greatestFiniteMagnitude, height: totalHeight)
+        )
+        let secondaryLabelY = (totalHeight - secondaryLabelSize.height) / 2
+        let secondaryLabelX =
+            staleDocumentationIndicator.frame.minX - secondaryLabelSize.width
+            - (staleIndicatorSize.width > 0 ? padding : 0)
+        secondaryLabel.frame = NSRect(
+            x: secondaryLabelX,
+            y: secondaryLabelY,
+            width: secondaryLabelSize.width,
+            height: secondaryLabelSize.height
+        )
+
+        // Main label fills space between icon and secondary label
+        let labelX = fileIcon.frame.maxX + padding * 2
+        let availableWidthForLabel = secondaryLabelX - labelX - padding
+        let labelY = (totalHeight - label.intrinsicContentSize.height) / 2
+        label.frame = NSRect(
+            x: labelX,
+            y: labelY,
+            width: availableWidthForLabel,
+            height: label.intrinsicContentSize.height
+        )
+    }
+
+    // MARK: - View Factory Methods
+
+    /// Creates the icon view (left).
+    private static func createIcon() -> NSImageView {
+        let icon = NSImageView()
+        icon.symbolConfiguration = .init(
+            pointSize: 13,
+            weight: .regular,
+            scale: .medium
+        )
+        return icon
+    }
+
+    /// Creates the primary label.
+    private static func createLabel(isEditable: Bool) -> NSTextField {
+        let label = NSTextField()
+        label.isBezeled = false
         label.drawsBackground = false
-        label.isBordered = false
         label.isEditable = isEditable
         label.isSelectable = isEditable
-        label.layer?.cornerRadius = 10.0
-        label.font = .labelFont(ofSize: fontSize)
-        label.lineBreakMode = .byTruncatingMiddle
+        label.cell?.usesSingleLineMode = true
+        label.cell?.lineBreakMode = .byTruncatingMiddle
+        label.font = .systemFont(ofSize: 13)
+        label.backgroundColor = .clear
+        label.layer?.cornerRadius = 4.0
+        return label
     }
 
-    /// Create secondary label
-    func createSecondaryLabel() -> NSTextField {
-        return NSTextField(frame: .zero)
+    /// Creates the secondary label (right-aligned).
+    private static func createSecondaryLabel() -> NSTextField {
+        let label = NSTextField()
+        label.isBezeled = false
+        label.drawsBackground = false
+        label.isEditable = false
+        label.font = .systemFont(ofSize: 12, weight: .medium)
+        label.textColor = .secondaryLabelColor
+        return label
     }
 
-    /// Configure secondary label
-    ///
-    /// - Parameter secondaryLabel: secondary label
-    func configSecondaryLabel(
-        secondaryLabel: NSTextField,
-        fontSize: CGFloat
-    ) {
-        secondaryLabel.translatesAutoresizingMaskIntoConstraints = false
-        secondaryLabel.drawsBackground = false
-        secondaryLabel.isBordered = false
-        secondaryLabel.isEditable = false
-        secondaryLabel.isSelectable = false
-        secondaryLabel.layer?.cornerRadius = 10.0
-        secondaryLabel.font = .systemFont(
-            ofSize: fontSize,
-            weight: .bold
+    /// Creates the warning indicator for stale documentation.
+    private static func createStaleIndicator() -> NSImageView {
+        let indicator = NSImageView()
+        indicator.symbolConfiguration = .init(
+            pointSize: 12,
+            weight: .semibold,
+            scale: .small
         )
-        secondaryLabel.alignment = .center
-        secondaryLabel.textColor = NSColor(Color.secondary)
-    }
-
-    /// Create icon
-    func createIcon() -> NSImageView {
-        return NSImageView(frame: .zero)
-    }
-
-    /// Configure icon
-    ///
-    /// - Parameter icon: icon
-    func configIcon(
-        icon: NSImageView,
-        pointSize: CGFloat,
-        weight: NSFont.Weight,
-        scale: NSImage.SymbolScale
-    ) {
-        icon.translatesAutoresizingMaskIntoConstraints = false
-        icon.symbolConfiguration = .init(
-            pointSize: pointSize,
-            weight: weight,
-            scale: scale
+        indicator.image = NSImage(
+            systemSymbolName: "exclamationmark.triangle.fill",
+            accessibilityDescription: "Stale documentation"
         )
-        icon.contentTintColor = NSColor(Color.secondary)
-    }
-
-    /// Create checkbox
-    func createCheckbox() -> NSButton {
-        let checkbox = NSButton(checkboxWithTitle: "", target: nil, action: nil)
-        checkbox.translatesAutoresizingMaskIntoConstraints = false
-        return checkbox
-    }
-
-    /// Create constraints
-    ///
-    /// - Parameter frameRect: the frame
-    func createConstraints(frame frameRect: NSRect) {
-        resizeSubviews(withOldSize: .zero)
-    }
-
-    // MARK: Layout
-    /// The width of the icon
-    let iconWidth: CGFloat = 22
-    let checkboxWidth: CGFloat = 16
-    let arrowDownIconWidth: CGFloat = 7
-
-    /// Resize the subviews
-    ///
-    /// - Parameter oldSize: the old size
-    override func resizeSubviews(withOldSize oldSize: NSSize) {  // swiftlint:disable:this function_body_length
-        super.resizeSubviews(withOldSize: oldSize)
-        fileIcon.frame = NSRect(
-            x: 2,
-            y: 4,
-            width: iconWidth,
-            height: frame.height
-        )
-        if let alignmentRect = fileIcon.image?.alignmentRect {
-            fileIcon.frame = NSRect(
-                x: (iconWidth + 4 - alignmentRect.width) / 2,
-                y: 4,
-                width: alignmentRect.width,
-                height: frame.height
-            )
-        }
-
-        if secondaryLabelRightAligned {
-            // Calculate the size of the secondaryLabel
-            let secondLabelWidth = secondaryLabel.frame.size.width
-            let newSize = secondaryLabel.sizeThatFits(
-                CGSize(
-                    width: secondLabelWidth,
-                    height: CGFloat.greatestFiniteMagnitude
-                )
-            )
-
-            // Determine the x-position for the secondaryLabel and upstreamChangesPullIcon
-            let secondaryLabelXPosition: CGFloat
-            if newSize.width > 0 {
-                secondaryLabelXPosition =
-                    frame.width - newSize.width - arrowDownIconWidth - 6
-                secondaryLabel.frame = NSRect(
-                    x: secondaryLabelXPosition + arrowDownIconWidth + 2,
-                    y: (frame.height - newSize.height) / 2,
-                    width: newSize.width + 7.5,
-                    height: newSize.height
-                )
-            } else {
-                secondaryLabelXPosition = frame.width - arrowDownIconWidth - 6
-                secondaryLabel.frame = NSRect.zero
-            }
-
-            upstreamChangesPullIcon.frame = NSRect(
-                x: secondaryLabelXPosition,
-                y: (frame.height - newSize.height),
-                width: arrowDownIconWidth,
-                height: frame.height
-            )
-
-            label.frame = NSRect(
-                x: fileIcon.frame.maxX + 2,
-                y: 2.5,
-                width: secondaryLabelXPosition - fileIcon.frame.maxX - 5,
-                height: 25
-            )
-        } else {
-            let mainLabelWidth = label.frame.size.width
-            let newSize = label.sizeThatFits(
-                CGSize(
-                    width: mainLabelWidth,
-                    height: CGFloat.greatestFiniteMagnitude
-                )
-            )
-            label.frame = NSRect(
-                x: fileIcon.frame.maxX + 2,
-                y: 2.5,
-                width: newSize.width,
-                height: 25
-            )
-            secondaryLabel.frame = NSRect(
-                x: label.frame.maxX + 2,
-                y: 2.5,
-                width: frame.width - label.frame.maxX - 2,
-                height: 25
-            )
-        }
-    }
-
-    /// Initializes the cell.
-    required init?(coder: NSCoder) {
-        fatalError(
-            """
-            init?(coder: NSCoder) isn't implemented on `StandardTableViewCell`.
-            Please use `.init(frame: NSRect, isEditable: Bool)
-            """
-        )
-    }
-
-    /// Returns the font size for the current row height. Defaults to `13.0`
-    private var fontSize: Double {
-        switch self.frame.height {
-        case 20: return 11
-        case 22: return 13
-        case 24: return 14
-        default: return 13
-        }
+        indicator.contentTintColor = .systemYellow
+        indicator.isHidden = true
+        return indicator
     }
 }

@@ -3,7 +3,6 @@
 //  structra
 //
 //  Created by Nanashi Li on 6/22/25.
-//  Updated 2025/06/26 to use ProjectNode & WorkspaceSession.
 //
 
 import AppKit
@@ -11,7 +10,7 @@ import OSLog
 
 extension ProjectNavigatorViewController: NSOutlineViewDelegate {
 
-    /// Always allow the cell to show a tooltip on truncated text.
+    /// Always allow cell expansion tooltips.
     func outlineView(
         _ outlineView: NSOutlineView,
         shouldShowCellExpansionFor tableColumn: NSTableColumn?,
@@ -20,7 +19,7 @@ extension ProjectNavigatorViewController: NSOutlineViewDelegate {
         return true
     }
 
-    /// Always show the standard outline‐disclosure triangle.
+    /// Always show disclosure triangle for items (folders/files).
     func outlineView(
         _ outlineView: NSOutlineView,
         shouldShowOutlineCellForItem item: Any
@@ -28,88 +27,71 @@ extension ProjectNavigatorViewController: NSOutlineViewDelegate {
         return true
     }
 
-    /// Returns your custom cell view, now driven by `ProjectNode`.
+    /// Provides a custom view for each row representing a `ProjectNode`.
     func outlineView(
         _ outlineView: NSOutlineView,
         viewFor tableColumn: NSTableColumn?,
         item: Any
     ) -> NSView? {
+        guard let node = item as? ProjectNode else { return nil }
+
+        // Try to reuse a registered cell
         guard
-            let tableColumn = tableColumn,
-            let node = item as? ProjectNode
+            let cell = outlineView.makeView(
+                withIdentifier: cellIdentifier,
+                owner: self
+            ) as? FileSystemTableViewCell
         else {
-            return nil
+            // Fallback if registration failed (should not happen)
+            let newCell = FileSystemTableViewCell(frame: .zero)
+            newCell.identifier = cellIdentifier
+            newCell.configure(with: node, isEditable: true)
+            return newCell
         }
 
-        let frameRect = NSRect(
-            x: 0,
-            y: 0,
-            width: tableColumn.width,
-            height: rowHeight
-        )
-
-        return FileSystemTableViewCell(
-            frame: frameRect,
-            node: node,
-            isEditable: true
-        )
+        cell.configure(with: node, isEditable: true)
+        return cell
     }
 
-    /// Syncs selection back into your session, and opens files on click. 
+    /// Handles selection changes and file opening.
     func outlineViewSelectionDidChange(_ notification: Notification) {
-        // 1) Don’t react to programmatic selections
         guard !isUpdatingSelection,
-              let session = workspaceManager?.currentSession,
-              let outline = notification.object as? NSOutlineView
-        else {
-          return
-        }
+            let session = workspaceManager?.currentSession,
+            let outline = notification.object as? NSOutlineView
+        else { return }
 
         let row = outline.selectedRow
-        // 2) No selection?
+
         guard row >= 0,
-              let node = outline.item(atRow: row) as? ProjectNode
+            let node = outline.item(atRow: row) as? ProjectNode
         else {
-          session.selectedNodeID = nil
-          return
+            session.selectedNodeID = nil
+            return
         }
 
-        // 3) Publish the new selection ID
         session.selectedNodeID = node.id
 
-        // 4) If it’s a file (not a folder), open it
+        // Open file if it's not a folder
         if !node.type.isFolder {
-          session.openFile(at: node.url)
-          logger.info("Opened file: \(node.url.path)")
+            session.openFile(at: node.url)
+            logger.info("Opened file: \(node.url.path)")
         }
-      }
+    }
 
-    /// Row height.
-    func outlineView(
-        _ outlineView: NSOutlineView,
-        heightOfRowByItem item: Any
-    ) -> CGFloat {
+    /// Defines fixed row height for all outline items.
+    func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any)
+        -> CGFloat
+    {
         return rowHeight
-    }
-
-    /// Save expansion whenever an item expands.
-    func outlineViewItemDidExpand(_ notification: Notification) {
-        saveExpansionState()
-    }
-
-    /// Save expansion whenever an item collapses.
-    func outlineViewItemDidCollapse(_ notification: Notification) {
-        saveExpansionState()
     }
 
     // MARK: - Persistence
 
-    /// Given a persisted UUID, return the matching `ProjectNode`.
+    /// Resolves a saved UUID to a tree node object.
     func outlineView(
         _ outlineView: NSOutlineView,
         itemForPersistentObject object: Any
     ) -> Any? {
-        // Accept both UUID and String (for flexibility)
         let uuid: UUID?
         if let id = object as? UUID {
             uuid = id
@@ -118,23 +100,14 @@ extension ProjectNavigatorViewController: NSOutlineViewDelegate {
         } else {
             uuid = nil
         }
-        guard let id = uuid,
-              let node = treeModel?.node(withID: id)
-        else {
-            return nil
-        }
-        return node
+        return uuid.flatMap { treeModel?.node(withID: $0) }
     }
 
-    /// Store each node’s UUID string for autosave / collapse/expand state.
+    /// Returns UUID string for a node to support state restoration.
     func outlineView(
         _ outlineView: NSOutlineView,
         persistentObjectForItem item: Any?
     ) -> Any? {
-        guard let node = item as? ProjectNode else {
-            return nil
-        }
-        // Return as String for UserDefaults compatibility
-        return node.id.uuidString
+        return (item as? ProjectNode)?.id.uuidString
     }
 }

@@ -1,61 +1,49 @@
+//
+//  ProjectNavigatorOutlineDataSource.swift
+//  structra
+//
+//  Created by Nanashi Li on 6/22/25.
+//
+
 import AppKit
 import OSLog
 
-// MARK: – NSOutlineViewDataSource
-
 extension ProjectNavigatorViewController: NSOutlineViewDataSource {
-    /// Number of children under a given node (or root).
+
+    /// Returns the number of children for a given node (or root if nil).
     func outlineView(
         _ outlineView: NSOutlineView,
         numberOfChildrenOfItem item: Any?
     ) -> Int {
         if let node = item as? ProjectNode {
-            logger.info(
-                "numberOfChildrenOfItem: \(node.name, privacy: .public) -> \(node.children.count)"
-            )
             return node.children.count
         }
-        logger.info("numberOfChildrenOfItem: root -> \(self.rootNodes.count)")
         return rootNodes.count
     }
 
-    /// Child node at index under a given node (or root).
+    /// Returns the child node at a specific index for the given item.
     func outlineView(
         _ outlineView: NSOutlineView,
         child index: Int,
         ofItem item: Any?
     ) -> Any {
         if let node = item as? ProjectNode {
-            let child = node.children[index]
-            logger.info(
-                "child: \(node.name, privacy: .public) [\(index)] -> \(child.name, privacy: .public)"
-            )
-            return child
+            return node.children[index]
         }
-        let child = rootNodes[index]
-        logger.info("child: root [\(index)] -> \(child.name, privacy: .public)")
-        return child
+        return rootNodes[index]
     }
 
-    /// Folders are expandable; files are not.
-    func outlineView(
-        _ outlineView: NSOutlineView,
-        isItemExpandable item: Any
-    ) -> Bool {
-        guard let node = item as? ProjectNode else {
-            logger.info("isItemExpandable: (not a ProjectNode) -> false")
-            return false
-        }
-        let expandable = node.type.isFolder
-        logger.info(
-            "isItemExpandable: \(node.name, privacy: .public) -> \(expandable)"
-        )
-        return expandable
+    /// Determines whether a node is expandable (i.e., is a folder).
+    func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any)
+        -> Bool
+    {
+        guard let node = item as? ProjectNode else { return false }
+        return node.type.isFolder
     }
 
     // MARK: – Drag & Drop
 
-    /// Provide a pasteboard writer (file path) for dragging.
+    /// Provides drag data representing a node's file path.
     func outlineView(
         _ outlineView: NSOutlineView,
         pasteboardWriterForItem item: Any
@@ -64,62 +52,64 @@ extension ProjectNavigatorViewController: NSOutlineViewDataSource {
             logger.fault("Drag: item is not ProjectNode")
             return nil
         }
-        let pboard = NSPasteboardItem()
-        pboard.setString(node.url.path, forType: dragType)
-        return pboard
+        let pboardItem = NSPasteboardItem()
+        pboardItem.setString(node.url.path, forType: dragType)
+        return pboardItem
     }
 
-    /// Validate whether a drop can occur on the proposed node.
+    /// Validates whether a drop operation is allowed for the given target.
     func outlineView(
         _ outlineView: NSOutlineView,
         validateDrop info: NSDraggingInfo,
         proposedItem item: Any?,
         proposedChildIndex index: Int
     ) -> NSDragOperation {
-        guard
-            let target = item as? ProjectNode,
-            target.type.isFolder,
-            let draggedPath = info.draggingPasteboard.string(forType: dragType)
+        guard let targetNode = item as? ProjectNode, targetNode.type.isFolder
+        else {
+            return []
+        }
+        guard let sourcePath = info.draggingPasteboard.string(forType: dragType)
         else {
             return []
         }
 
-        let draggedURL = URL(fileURLWithPath: draggedPath)
+        let sourceURL = URL(fileURLWithPath: sourcePath)
 
-        // Prevent dropping onto itself or inside its own subtree,
-        // or into the same parent folder.
-        let isSubtree = draggedPath.hasPrefix(target.url.path)
-        let sameParent = draggedURL.deletingLastPathComponent() == target.url
-
-        guard !isSubtree && !sameParent else {
+        // Prevent invalid drops: into self, or into parent folder
+        if targetNode.url.path.hasPrefix(sourceURL.path)
+            || sourceURL.deletingLastPathComponent() == targetNode.url
+        {
             return []
         }
 
         return .move
     }
 
-    /// Perform the move on disk. FileSystemWatcher will pick up and update the model.
+    /// Accepts and performs a valid drop by moving the file in the filesystem.
     func outlineView(
         _ outlineView: NSOutlineView,
         acceptDrop info: NSDraggingInfo,
         item: Any?,
         childIndex index: Int
     ) -> Bool {
-        guard
-            let target = item as? ProjectNode,
-            let draggedPath = info.draggingPasteboard.string(forType: dragType)
+        guard let targetNode = item as? ProjectNode,
+            let sourcePath = info.draggingPasteboard.string(forType: dragType)
         else {
             return false
         }
 
-        let srcURL = URL(fileURLWithPath: draggedPath)
-        let dstURL = target.url.appendingPathComponent(srcURL.lastPathComponent)
+        let sourceURL = URL(fileURLWithPath: sourcePath)
+        let destinationURL = targetNode.url.appendingPathComponent(
+            sourceURL.lastPathComponent
+        )
 
         do {
-            try FileManager.default.moveItem(at: srcURL, to: dstURL)
+            try FileManager.default.moveItem(at: sourceURL, to: destinationURL)
             return true
         } catch {
-            logger.fault("Failed moving \(srcURL) → \(dstURL): \(error)")
+            logger.error(
+                "Failed to move item during drop: \(error.localizedDescription)"
+            )
             return false
         }
     }

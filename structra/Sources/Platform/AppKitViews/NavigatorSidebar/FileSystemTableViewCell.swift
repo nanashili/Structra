@@ -1,163 +1,136 @@
+//
+//  FileSystemTableViewCell.swift
+//  structra
+//
+//  Created by Tihan-Nico Paxton on 6/22/25.
+//
+
 import AppKit
 
+/// A specialized cell for displaying `ProjectNode` data.
 class FileSystemTableViewCell: StandardTableViewCell {
 
-    /// The `ProjectNode` the cell represents.
-    var node: ProjectNode!
+    private var node: ProjectNode?  // Bound node for this cell
+    private let errorRed = NSColor(red: 1, green: 0.1, blue: 0.1, alpha: 0.2)  // Error highlight
 
-    var changeLabelLargeWidth: NSLayoutConstraint!
-    var changeLabelSmallWidth: NSLayoutConstraint!
+    // MARK: - Configuration
 
-    init(frame frameRect: NSRect, node: ProjectNode?, isEditable: Bool = true) {
-        super.init(frame: frameRect, isEditable: isEditable)
-
-        if let node = node {
-            addIcon(for: node)
-        }
-
-        Task { @MainActor in
-            addModel()
-        }
-    }
-
-    override func configLabel(label: NSTextField, isEditable: Bool) {
-        super.configLabel(label: label, isEditable: isEditable)
-        label.delegate = self
-    }
-
-    func addIcon(for node: ProjectNode) {
-        var imageName = iconName(for: node)
-
-        guard
-            let image = NSImage(
-                systemSymbolName: imageName,
-                accessibilityDescription: nil
-            )
-        else {
-            return
-        }
-
+    /// Sets up the cell UI based on the provided node data.
+    func configure(with node: ProjectNode, isEditable: Bool) {
         self.node = node
-        fileIcon.image = image
-        fileIcon.contentTintColor = color(for: node)
-        toolTip = node.name
-        label.stringValue = displayName(for: node)
-    }
 
-    func addModel() {
-        secondaryLabel.stringValue = node.metadata.tags.first ?? ""
-        if secondaryLabel.stringValue == "?" {
-            secondaryLabel.stringValue = "A"
-        }
-    }
+        let iconName = self.iconName(for: node)
+        let iconColor = self.color(for: node)
+        let secondaryText = node.metadata.tags.first ?? ""
 
-    required init?(coder: NSCoder) {
-        fatalError(
-            """
-                init?(coder: NSCoder) isn't implemented on FileSystemTableViewCell.
-                Use init(frame:node:isEditable:) instead.
-            """
+        super.configure(
+            labelText: displayName(for: node),
+            labelIsEditable: isEditable,
+            icon: NSImage(
+                systemSymbolName: iconName,
+                accessibilityDescription: nil
+            ),
+            iconColor: iconColor,
+            secondaryText: secondaryText,
+            isDocumentationStale: node.isDocumentationStale
         )
+
+        self.toolTip = node.name
+        self.label.delegate = self
     }
 
-    override init(frame frameRect: NSRect) {
-        fatalError(
-            """
-                init(frame:) isn't implemented. Use init(frame:node:isEditable:) instead.
-            """
-        )
+    // MARK: - Cell Lifecycle
+
+    /// Reset internal references before reuse.
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        self.node = nil
+        self.label.delegate = nil
     }
 
-    private var fontSize: Double {
-        switch self.frame.height {
-        case 20: return 11
-        case 22: return 13
-        case 24: return 14
-        default: return 13
-        }
+    // MARK: - Editing
+
+    /// Makes the label editable and focuses it.
+    @MainActor
+    func beginEditing() {
+        self.window?.makeFirstResponder(self.label)
     }
 
-    func displayName(for node: ProjectNode) -> String {
-        node.name.deletingPathExtension
+    // MARK: - Data to View Translation
+
+    /// Extracts display name from node path.
+    private func displayName(for node: ProjectNode) -> String {
+        return node.name.deletingPathExtension
     }
 
-    func iconName(for node: ProjectNode) -> String {
-        if node.type == .folder(customIconName: "") {
+    /// Selects appropriate SF Symbol based on node type and metadata.
+    private func iconName(for node: ProjectNode) -> String {
+        switch node.type {
+        case .folder:
             return "folder"
+        case .file:
+            if node.metadata.isReadOnly { return "lock" }
+            if node.metadata.fileType == "swift" { return "swift" }
+            return "doc"
         }
-        if node.metadata.isReadOnly {
-            return "lock"
-        }
-        if node.metadata.fileType == "swift" {
-            return "swift"
-        }
-        return "doc"
     }
 
-    func color(for node: ProjectNode) -> NSColor {
-        if node.type == .file(customIconName: "") {
-            return .systemBlue
-        } else {
+    /// Returns color used to tint the icon based on node type.
+    private func color(for node: ProjectNode) -> NSColor {
+        switch node.type {
+        case .folder:
             return .controlAccentColor
+        case .file:
+            return .systemBlue
         }
     }
 }
 
-let errorRed = NSColor(red: 1, green: 0, blue: 0, alpha: 0.2)
+// MARK: - NSTextFieldDelegate for Renaming
 
-extension FileSystemTableViewCell: @MainActor NSTextFieldDelegate {
+extension FileSystemTableViewCell: NSTextFieldDelegate {
 
+    /// Updates background to red if file name is invalid while typing.
     func controlTextDidChange(_ obj: Notification) {
-        label.backgroundColor =
-            validateFileName(for: label?.stringValue ?? "") ? .none : errorRed
+        guard let textField = obj.object as? NSTextField else { return }
+        let isValid = validate(fileName: textField.stringValue)
+        textField.layer?.backgroundColor =
+            isValid ? NSColor.clear.cgColor : errorRed.cgColor
     }
 
+    /// Applies or reverts the edited name after editing ends.
     func controlTextDidEndEditing(_ obj: Notification) {
-        label.backgroundColor =
-            validateFileName(for: label?.stringValue ?? "") ? .none : errorRed
-        if validateFileName(for: label?.stringValue ?? "") {
-            let newURL = node.url.deletingLastPathComponent()
-                .appendingPathComponent(label?.stringValue ?? "")
-            // FileManager.default.moveItem(at: node.url, to: newURL)
-            node.rename(to: label?.stringValue ?? "")
+        guard let node = self.node, let textField = obj.object as? NSTextField
+        else { return }
+
+        textField.layer?.backgroundColor = NSColor.clear.cgColor
+
+        if validate(fileName: textField.stringValue) {
+            node.rename(to: textField.stringValue)
         } else {
-            label?.stringValue = node.name
+            textField.stringValue = displayName(for: node)
         }
     }
 
-    func validateFileName(for newName: String) -> Bool {
-        guard newName != node.name else { return true }
+    /// Validates the new file name: non-empty, safe characters, not existing.
+    private func validate(fileName: String) -> Bool {
+        guard let node = self.node else { return false }
+        guard fileName != node.name else { return true }
 
         let newPath = node.url.deletingLastPathComponent()
-            .appendingPathComponent(newName).path
+            .appendingPathComponent(fileName).path
 
-        return !newName.isEmpty
-            && newName.isValidFilename
+        return !fileName.isEmpty
+            && fileName.range(of: "[/:]", options: .regularExpression) == nil
             && !FileManager.default.fileExists(atPath: newPath)
     }
 }
 
+// MARK: - String Extension Helper
+
 extension String {
-    var isValidFilename: Bool {
-        // Exclude invalid characters (like ":")
-        let regex = "^[^:]+$"
-        return NSPredicate(format: "SELF MATCHES %@", regex).evaluate(
-            with: self
-        )
-    }
-
-    var deletingPathExtension: String {
-        (self as NSString).deletingPathExtension
-    }
-
-    func typeHidden(hidden: Bool) -> String {
-        return hidden ? self.deletingPathExtension : self
-    }
-}
-
-extension FileSystemTableViewCell {
-    @MainActor
-    func beginEditing() {
-        self.window?.makeFirstResponder(self.textField)
+    /// Removes file extension from string.
+    fileprivate var deletingPathExtension: String {
+        return (self as NSString).deletingPathExtension
     }
 }

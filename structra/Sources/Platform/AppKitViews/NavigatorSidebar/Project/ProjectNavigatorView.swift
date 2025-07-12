@@ -2,23 +2,24 @@
 //  ProjectNavigatorView.swift
 //  structra
 //
-//  Created by Tihan-Nico Paxton on 6/22/25.
-//  Updated 2025/06/26 to drive selection with updateSelection(to:).
+//  Created by Nanashi Li on 6/22/25.
 //
 
 import Combine
 import SwiftUI
 
+/// A SwiftUI wrapper for `ProjectNavigatorViewController`.
 struct ProjectNavigatorView: NSViewControllerRepresentable {
     @EnvironmentObject var workspaceManager: WorkspaceManager
 
-    func makeNSViewController(
-        context: Context
-    ) -> ProjectNavigatorViewController {
+    /// Creates and configures the AppKit view controller.
+    func makeNSViewController(context: Context)
+        -> ProjectNavigatorViewController
+    {
         let controller = ProjectNavigatorViewController()
         controller.workspaceManager = workspaceManager
 
-        // Subscribe to selectedNodeID and forward to the outline:
+        // Sync selection changes reactively via Combine.
         if let session = workspaceManager.currentSession {
             session.$selectedNodeID
                 .receive(on: DispatchQueue.main)
@@ -28,24 +29,23 @@ struct ProjectNavigatorView: NSViewControllerRepresentable {
                 .store(in: &context.coordinator.cancellables)
         }
 
-        context.coordinator.controller = controller
         return controller
     }
 
+    /// No imperative updates needed; Combine handles updates.
     func updateNSViewController(
         _ controller: ProjectNavigatorViewController,
         context: Context
     ) {
-        let nodeId = workspaceManager.currentSession?.selectedNodeID
-        controller.updateSelection(to: nodeId)
+        // Intentionally left empty — reactive Combine binding used instead.
     }
 
+    /// Coordinator to store Combine subscriptions.
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
 
     class Coordinator: NSObject {
-        var controller: ProjectNavigatorViewController?
         var cancellables = Set<AnyCancellable>()
     }
 }
