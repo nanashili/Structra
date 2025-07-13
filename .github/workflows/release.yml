@@ -40,13 +40,6 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
           | xcbeautify
 
-      - name: Export .app from Archive (Unsigned)
-        run: |
-          xcodebuild -exportArchive \
-            -archivePath "./build/${APP_NAME}.xcarchive" \
-            -exportPath "./build" \
-            -exportOptionsPlist ./ExportOptions.plist
-
       - name: Create ExportOptions.plist for Unsigned Export
         run: |
           cat > ./ExportOptions.plist <<- EOM
@@ -65,6 +58,13 @@ jobs:
           </dict>
           </plist>
           EOM
+
+      - name: Export .app from Archive (Unsigned)
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "./build/${APP_NAME}.xcarchive" \
+            -exportPath "./build" \
+            -exportOptionsPlist ./ExportOptions.plist
 
       - name: Create DMG with fixed filename
         run: |
