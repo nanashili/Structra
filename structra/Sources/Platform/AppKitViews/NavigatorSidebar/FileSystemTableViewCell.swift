@@ -51,7 +51,6 @@ class FileSystemTableViewCell: StandardTableViewCell {
     // MARK: - Editing
 
     /// Makes the label editable and focuses it.
-    @MainActor
     func beginEditing() {
         self.window?.makeFirstResponder(self.label)
     }

@@ -174,12 +174,17 @@ final class ProjectNavigatorMenu: NSMenu, NSMenuDelegate {
             ) as? FileSystemTableViewCell
         else { return }
 
-        cell.beginEditing()
+        DispatchQueue.main.async {
+            cell.beginEditing()
+        }
     }
 
     @objc private func generateDocument() {
         guard let node = targetNode else { return }
-        workspaceManager?.initiateDocumentationGeneration(for: node, detailLevel: "exhaustive")
+        workspaceManager?.initiateDocumentationGeneration(
+            for: node,
+            detailLevel: "exhaustive"
+        )
     }
 
     // MARK: - Asynchronous File I/O Actions
