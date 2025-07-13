@@ -2,15 +2,15 @@
 //  RootView.swift
 //  structra
 //
-//  Created by Tihan-Nico Paxton on 6/18/25.
+//  Created by Nanashi Li on 6/18/25.
 //
 
+import Catalyst
 import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject var projectVM: ProjectListViewModel
     @State private var window: NSWindow?
-    @State private var didOpenEditor = false
 
     var body: some View {
         Group {
@@ -30,19 +30,6 @@ struct RootView: View {
                 )
             }
         )
-        .onChange(of: projectVM.currentProject) { oldProject, newProject in
-            guard let win = window else { return }
-            applyWindowStyle(to: win, isWelcome: newProject == nil)
-
-            // Open the editor window if a project is set and we haven't already
-            if newProject != nil && !didOpenEditor {
-                WorkspaceSession(projectURL: projectVM.currentProject!.url)
-                    .showWindow()
-                didOpenEditor = true
-
-                win.close()
-            }
-        }
     }
 
     private func applyWindowStyle(to window: NSWindow, isWelcome: Bool) {

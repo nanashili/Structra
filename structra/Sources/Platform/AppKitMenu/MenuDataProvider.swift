@@ -2,7 +2,7 @@
 //  MenuDataProvider.swift
 //  structra
 //
-//  Created by Tihan-Nico Paxton on 6/18/25.
+//  Created by Nanashi Li on 6/18/25.
 //
 
 import AppKit

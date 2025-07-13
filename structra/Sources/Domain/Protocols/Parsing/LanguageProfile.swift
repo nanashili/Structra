@@ -11,10 +11,14 @@ import Foundation
 
 /// Defines the contract for a HYPER-OPTIMIZED language-specific parser.
 /// It operates directly on raw `Data` for maximum performance.
+/// Defines the capabilities for parsing a specific language, including symbol extraction and signature patterns.
 public protocol LanguageProfile {
-    /// Extracts import/require/include statements from the file's raw data.
+    /// Extracts import statements from the given code data.
     func extractImports(from data: Data) -> [String]
 
-    /// Extracts high-level symbol declarations from the file's raw data.
+    /// Extracts symbol definitions (classes, functions, etc.) from the given code data.
     func extractSymbols(from data: Data) -> [String]
+
+    /// Provides the regex patterns for parsing function signatures.
+    var pattern: LanguagePattern { get }
 }

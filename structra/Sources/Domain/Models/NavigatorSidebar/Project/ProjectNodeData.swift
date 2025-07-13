@@ -2,7 +2,7 @@
 //  ProjectNodeData.swift
 //  structra
 //
-//  Created by Tihan-Nico Paxton on 6/22/25.
+//  Created by Nanashi Li on 6/22/25.
 //
 
 import Foundation

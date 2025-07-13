@@ -11,7 +11,6 @@ import OSLog
 import SwiftUI
 
 /// Workspace view.
-
 struct WorkspaceView: View {
 
     @ObservedObject var session: WorkspaceSession

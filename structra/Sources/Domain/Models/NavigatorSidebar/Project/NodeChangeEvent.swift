@@ -12,7 +12,13 @@ import Foundation
 public enum NodeChangeEvent {
     case added(node: ProjectNode, parentID: UUID?)
     case removed(nodeID: UUID, parentID: UUID?, fromIndex: Int)
-    case moved(nodeID: UUID, fromParentID: UUID?, toParentID: UUID?)
+    case moved(
+        nodeID: UUID,
+        fromParentID: UUID?,
+        toParentID: UUID?,
+        fromIndex: Int,
+        toIndex: Int
+    )
     case renamed(nodeID: UUID, oldName: String, newName: String)
     case metadataUpdated(nodeID: UUID, metadata: NodeMetadata)
     case reloaded(parentID: UUID?)

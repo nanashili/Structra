@@ -42,6 +42,9 @@ public final class ProjectNode: Identifiable {
 
     /// Weak back-pointer to the parent node (`nil` for root nodes).
     public weak var parent: ProjectNode?
+    
+    /// Checks if files document has become stale
+    public var isDocumentationStale: Bool = false
 
     var sortDescriptor: SortDescriptor = .name
     var sortDirection: SortDirection = .ascending

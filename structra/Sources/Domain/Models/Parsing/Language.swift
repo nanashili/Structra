@@ -30,4 +30,8 @@ public enum Language: String, Codable, Hashable, CaseIterable {
 
     // Unknown
     case unknown
+
+    init?(url: URL) {
+        self.init(rawValue: url.pathExtension.lowercased())
+    }
 }

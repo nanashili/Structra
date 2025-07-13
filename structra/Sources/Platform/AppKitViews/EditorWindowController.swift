@@ -133,9 +133,7 @@ extension EditorWindowController: NSWindowDelegate {
         window?.toolbar?.validateVisibleItems()
     }
 
-    func windowDidResignKey(_ notification: Notification) {
-        // Optional: Handle when window loses key status
-    }
+    func windowDidResignKey(_ notification: Notification) {}
 }
 
 extension NSLayoutConstraint.Priority {
