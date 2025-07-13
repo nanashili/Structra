@@ -26,15 +26,19 @@ jobs:
         id: get_version
         run: echo "VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
+      - name: Install xcbeautify
+        run: brew install xcbeautify
+
       - name: Build Xcode Archive (Unsigned)
         run: |
-          xcodebuild archive \
+          set -o pipefail && xcodebuild archive \
             -project "$PROJECT_NAME" \
             -scheme "$SCHEME_NAME" \
             -configuration Release \
             -archivePath "./build/${APP_NAME}.xcarchive" \
             CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGNING_REQUIRED=NO \
+          | xcbeautify
 
       - name: Export .app from Archive (Unsigned)
         run: |
