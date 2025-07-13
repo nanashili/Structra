@@ -5,6 +5,7 @@
 //  Created by Nanashi Li on 6/14/25.
 //
 
+import Catalyst
 import SwiftUI
 
 @main
@@ -31,15 +32,18 @@ struct structraApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if hasCompletedWalkthrough {
-                RootView()
-                    .environmentObject(projectViewModel)
-                    .environmentObject(workspaceManager)
-            } else {
-                WalkthroughView(
-                    hasCompletedWalkthrough: $hasCompletedWalkthrough
-                )
+            Group {
+                if hasCompletedWalkthrough {
+                    RootView()
+                        .environmentObject(projectViewModel)
+                        .environmentObject(workspaceManager)
+                } else {
+                    WalkthroughView(
+                        hasCompletedWalkthrough: $hasCompletedWalkthrough
+                    )
+                }
             }
+            .withUpdateService(appDelegate.catalyst)
         }
         .commands {
             #if DEBUG
@@ -50,6 +54,12 @@ struct structraApp: App {
                     .keyboardShortcut("R", modifiers: [.command, .shift])
                 }
             #endif
+
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates...") {
+                    appDelegate.catalyst.checkForUpdates()
+                }
+            }
         }
     }
 }

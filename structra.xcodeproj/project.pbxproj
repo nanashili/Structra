@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A0194C532E23C2A3009E3B3C /* Catalyst in Frameworks */ = {isa = PBXBuildFile; productRef = A0194C522E23C2A3009E3B3C /* Catalyst */; };
+		A0194C552E23C2A3009E3B3C /* Catalyst-Helper in Frameworks */ = {isa = PBXBuildFile; productRef = A0194C542E23C2A3009E3B3C /* Catalyst-Helper */; };
+		A0194E4C2E242C88009E3B3C /* Catalyst in Frameworks */ = {isa = PBXBuildFile; productRef = A0194E4B2E242C88009E3B3C /* Catalyst */; };
+		A0194E4E2E242C88009E3B3C /* Catalyst-Helper in Frameworks */ = {isa = PBXBuildFile; productRef = A0194E4D2E242C88009E3B3C /* Catalyst-Helper */; };
 		A05B26BD2E1930A6003688C7 /* OpenAI in Frameworks */ = {isa = PBXBuildFile; productRef = A05B26BC2E1930A6003688C7 /* OpenAI */; };
 /* End PBXBuildFile section */
 
@@ -57,6 +61,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				A05B26BD2E1930A6003688C7 /* OpenAI in Frameworks */,
+				A0194E4C2E242C88009E3B3C /* Catalyst in Frameworks */,
+				A0194C532E23C2A3009E3B3C /* Catalyst in Frameworks */,
+				A0194C552E23C2A3009E3B3C /* Catalyst-Helper in Frameworks */,
+				A0194E4E2E242C88009E3B3C /* Catalyst-Helper in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -118,6 +126,10 @@
 			name = structra;
 			packageProductDependencies = (
 				A05B26BC2E1930A6003688C7 /* OpenAI */,
+				A0194C522E23C2A3009E3B3C /* Catalyst */,
+				A0194C542E23C2A3009E3B3C /* Catalyst-Helper */,
+				A0194E4B2E242C88009E3B3C /* Catalyst */,
+				A0194E4D2E242C88009E3B3C /* Catalyst-Helper */,
 			);
 			productName = structra;
 			productReference = A058ED6C2DFE0C39005E0480 /* structra.app */;
@@ -203,6 +215,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				A05B26BB2E1930A6003688C7 /* XCRemoteSwiftPackageReference "OpenAI" */,
+				A0194E4A2E242C88009E3B3C /* XCRemoteSwiftPackageReference "Catalyst" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A058ED6D2DFE0C39005E0480 /* Products */;
@@ -405,6 +418,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -425,6 +439,7 @@
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Structra;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -449,6 +464,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -469,6 +485,7 @@
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Structra;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -606,6 +623,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		A0194E4A2E242C88009E3B3C /* XCRemoteSwiftPackageReference "Catalyst" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/nanashili/Catalyst";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 		A05B26BB2E1930A6003688C7 /* XCRemoteSwiftPackageReference "OpenAI" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/MacPaw/OpenAI";
@@ -617,6 +642,24 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		A0194C522E23C2A3009E3B3C /* Catalyst */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Catalyst;
+		};
+		A0194C542E23C2A3009E3B3C /* Catalyst-Helper */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = "Catalyst-Helper";
+		};
+		A0194E4B2E242C88009E3B3C /* Catalyst */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A0194E4A2E242C88009E3B3C /* XCRemoteSwiftPackageReference "Catalyst" */;
+			productName = Catalyst;
+		};
+		A0194E4D2E242C88009E3B3C /* Catalyst-Helper */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A0194E4A2E242C88009E3B3C /* XCRemoteSwiftPackageReference "Catalyst" */;
+			productName = "Catalyst-Helper";
+		};
 		A05B26BC2E1930A6003688C7 /* OpenAI */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A05B26BB2E1930A6003688C7 /* XCRemoteSwiftPackageReference "OpenAI" */;

@@ -1,6 +1,15 @@
 {
-  "originHash" : "c351aabe13067917247f7926404d096603b95663248b51124280feb61a2edf30",
+  "originHash" : "8d69c6601905afc806fdf313637b1bbfae27288034b818f903eaa4581ccda6a6",
   "pins" : [
+    {
+      "identity" : "catalyst",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/nanashili/Catalyst",
+      "state" : {
+        "branch" : "main",
+        "revision" : "6bd989a465a2d0db2c97ccc1455003a9d2cef501"
+      }
+    },
     {
       "identity" : "openai",
       "kind" : "remoteSourceControl",
