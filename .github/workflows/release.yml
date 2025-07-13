@@ -26,18 +26,69 @@ jobs:
         id: get_version
         run: echo "VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
-      - name: Install xcbeautify
-        run: brew install xcbeautify
+      # Cache Homebrew packages
+      - name: Cache Homebrew
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/Homebrew
+            /usr/local/Homebrew
+          key: ${{ runner.os }}-homebrew-${{ hashFiles('.github/workflows/*.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-homebrew-
 
+      # Cache DerivedData for faster builds
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-deriveddata-${{ hashFiles('**/*.xcodeproj/project.pbxproj', '**/*.xcworkspace/contents.xcworkspacedata') }}-${{ hashFiles('**/*.swift', '**/*.h', '**/*.m') }}
+          restore-keys: |
+            ${{ runner.os }}-deriveddata-${{ hashFiles('**/*.xcodeproj/project.pbxproj', '**/*.xcworkspace/contents.xcworkspacedata') }}-
+            ${{ runner.os }}-deriveddata-
+
+      # Cache Swift Package Manager dependencies
+      - name: Cache SPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved', '**/*.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      # Cache CocoaPods dependencies (if you use them)
+      - name: Cache CocoaPods
+        if: hashFiles('Podfile.lock') != ''
+        uses: actions/cache@v4
+        with:
+          path: Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install xcbeautify
+        run: |
+          if ! command -v xcbeautify &> /dev/null; then
+            brew install xcbeautify
+          fi
+
+      # Set custom DerivedData path for better caching control
       - name: Build Xcode Archive (Unsigned)
         run: |
+          DERIVED_DATA_PATH="${HOME}/Library/Developer/Xcode/DerivedData/${SCHEME_NAME}-build"
+          
           set -o pipefail && xcodebuild archive \
             -project "$PROJECT_NAME" \
             -scheme "$SCHEME_NAME" \
             -configuration Release \
             -archivePath "./build/${APP_NAME}.xcarchive" \
+            -derivedDataPath "$DERIVED_DATA_PATH" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
           | xcbeautify
 
       - name: Create ExportOptions.plist for Unsigned Export
@@ -48,7 +99,14 @@ jobs:
           <plist version="1.0">
           <dict>
               <key>method</key>
-              <string>copy</string>
+              <string>mac-application</string>
+
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>signingCertificate</key>
+              <string></string>
+              <key>provisioningProfiles</key>
+              <dict/>
           </dict>
           </plist>
           EOM
@@ -76,9 +134,8 @@ jobs:
       - name: Generate update.json with public URL
         id: generate_json
         run: |
-          # This URL is now stable and public because it points to a release asset.
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ env.DEV_RELEASE_TAG }}/${{ env.DMG_FILENAME }}"
-          
+        
           jq -n \
             --arg version "${VERSION}" \
             --arg url "$DOWNLOAD_URL" \
@@ -94,10 +151,17 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.DEV_RELEASE_TAG }}
-          prerelease: true=
+          prerelease: true
           overwrite: true
           name: "Latest Development Build (${{ env.VERSION }})"
           body: "This pre-release contains the latest build from the `main` branch. Automatically updated on every push."
           files: |
             ./build/${{ env.DMG_FILENAME }}
             ./update.json
+
+      # Clean up old caches periodically
+      - name: Cleanup old caches
+        if: github.event_name == 'push'
+        run: |
+          # Remove old DerivedData (older than 7 days)
+          find ~/Library/Developer/Xcode/DerivedData -maxdepth 1 -type d -mtime +7 -exec rm -rf {} + 2>/dev/null || true
