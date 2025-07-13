@@ -48,13 +48,7 @@ jobs:
           <plist version="1.0">
           <dict>
               <key>method</key>
-              <string>developer-id</string>
-              <key>signingStyle</key>
-              <string>manual</string>
-              <key>signingCertificate</key>
-              <string></string>
-              <key>provisioningProfiles</key>
-              <dict/>
+              <string>copy</string>
           </dict>
           </plist>
           EOM
