@@ -1,0 +1,105 @@
+name: Build and Publish Latest Dev Build
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  APP_NAME: "Structra"
+  PROJECT_NAME: "structra.xcodeproj"
+  SCHEME_NAME: "structra"
+  DEV_RELEASE_TAG: "latest-dev-build"
+  DMG_FILENAME: "Structra-latest.dmg"
+
+jobs:
+  build-and-publish:
+    name: Publish Latest Dev Build
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get short commit hash as version
+        id: get_version
+        run: echo "VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Build Xcode Archive (Unsigned)
+        run: |
+          xcodebuild archive \
+            -project "$PROJECT_NAME" \
+            -scheme "$SCHEME_NAME" \
+            -configuration Release \
+            -archivePath "./build/${APP_NAME}.xcarchive" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Export .app from Archive (Unsigned)
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "./build/${APP_NAME}.xcarchive" \
+            -exportPath "./build" \
+            -exportOptionsPlist ./ExportOptions.plist
+
+      - name: Create ExportOptions.plist for Unsigned Export
+        run: |
+          cat > ./ExportOptions.plist <<- EOM
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>developer-id</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>signingCertificate</key>
+              <string></string>
+              <key>provisioningProfiles</key>
+              <dict/>
+          </dict>
+          </plist>
+          EOM
+
+      - name: Create DMG with fixed filename
+        run: |
+          hdiutil create -volname "${APP_NAME} ${VERSION}" \
+            -srcfolder "./build/${APP_NAME}.app" \
+            -ov -format UDZO \
+            "./build/${DMG_FILENAME}"
+
+      - name: Get DMG file size
+        id: get_dmg_info
+        run: |
+          DMG_PATH="./build/${DMG_FILENAME}"
+          echo "DMG_SIZE=$(stat -f%z "$DMG_PATH")" >> $GITHUB_ENV
+
+      - name: Generate update.json with public URL
+        id: generate_json
+        run: |
+          # This URL is now stable and public because it points to a release asset.
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ env.DEV_RELEASE_TAG }}/${{ env.DMG_FILENAME }}"
+          
+          jq -n \
+            --arg version "${VERSION}" \
+            --arg url "$DOWNLOAD_URL" \
+            --argjson size "${{ env.DMG_SIZE }}" \
+            '{
+              "version": $version,
+              "url": $url,
+              "fileSize": $size,
+              "releaseNotes": "Development build from commit ${{ env.VERSION }}."
+            }' > ./update.json
+
+      - name: Publish to Development Pre-Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.DEV_RELEASE_TAG }}
+          prerelease: true=
+          overwrite: true
+          name: "Latest Development Build (${{ env.VERSION }})"
+          body: "This pre-release contains the latest build from the `main` branch. Automatically updated on every push."
+          files: |
+            ./build/${{ env.DMG_FILENAME }}
+            ./update.json
