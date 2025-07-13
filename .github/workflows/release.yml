@@ -17,6 +17,8 @@ jobs:
   build-and-publish:
     name: Publish Latest Dev Build
     runs-on: "macos-15"
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -134,6 +136,7 @@ jobs:
       - name: Generate update.json with public URL
         id: generate_json
         run: |
+          # This URL is now stable and public because it points to a release asset.
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ env.DEV_RELEASE_TAG }}/${{ env.DMG_FILENAME }}"
         
           jq -n \
@@ -147,12 +150,20 @@ jobs:
               "releaseNotes": "Development build from commit ${{ env.VERSION }}."
             }' > ./update.json
 
+      # Delete existing release if it exists
+      - name: Delete existing release
+        uses: dev-drprasad/delete-tag-and-release@v1.1
+        with:
+          tag_name: ${{ env.DEV_RELEASE_TAG }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          delete_release: true
+        continue-on-error: true
+
       - name: Publish to Development Pre-Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.DEV_RELEASE_TAG }}
           prerelease: true
-          overwrite: true
           name: "Latest Development Build (${{ env.VERSION }})"
           body: "This pre-release contains the latest build from the `main` branch. Automatically updated on every push."
           files: |
